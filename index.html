@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>3D Card con Fuegos Artificiales</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        /* --- Estilos base --- */
+        * { box-sizing: border-box; margin:0; padding:0; }
+        html,body { height:100%; }
+        body {
+            font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+            background: #ffc0cb;
+            -webkit-font-smoothing:antialiased;
+            overflow: hidden;
+        }
+        ::selection { background:#ffb3ba; color:#fff; }
+        ::-moz-selection { background:#ffb3ba; color:#fff; }
+
+        /* --- Perspectiva / Contenedor 3D --- */
+        #perspectiva{
+            position:absolute;
+            top:150px;
+            left:50%;
+            transform:translateX(-50%);
+            perspective:800px;
+            z-index:2;
+        }
+        #contenedor{
+            width:600px;
+            height:420px;
+            border-radius:10px;
+            transform-style:preserve-3d;
+            position:relative;
+        }
+
+        .cara{
+            position:absolute; top:0; left:0;
+            width:100%; height:100%;
+            backface-visibility:hidden;
+        }
+        .cara h1{
+            margin-top:160px;
+            text-align:center;
+            cursor:pointer;
+            user-select:none;
+            color:#ffffff;
+            font-size:1.8em;
+            text-shadow:0 1px 1px rgba(255,255,255,0.9);
+        }
+
+        .frontal{
+            z-index:20;
+            border-radius:10px;
+            background:#bbd8c0;
+            box-shadow:0 4px 10px rgba(0,0,0,0.1);
+        }
+        .trasera{
+            transform:rotateY(-180deg);
+            border-radius:10px;
+            background:#bbd8c0;
+            box-shadow:0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Tapa y partes del sobre */
+        #abrir{
+            position:absolute; top:0; left:0;
+            width:0; height:0;
+            border-top:260px solid #bbd8c0;
+            border-left:300px solid transparent;
+            border-right:300px solid transparent;
+            transform-origin:center top;
+            transform-style:preserve-3d;
+            z-index:10;
+        }
+        #partes{
+            position:absolute; top:0; left:0;
+            width:0; height:0;
+            border-left:300px solid #CFE7CD;
+            border-top:210px solid transparent;
+            border-bottom:210px solid transparent;
+            z-index:5;
+        }
+        #partes:after{
+            content:""; position:absolute; bottom:-210px; left:-300px;
+            width:0;height:0;
+            border-bottom:260px solid #bbd8c0;
+            border-left:300px solid transparent;
+            border-right:300px solid transparent;
+        }
+        #partes:before{
+            content:""; position:absolute; top:-210px; right:-300px;
+            width:0;height:0;
+            border-right:300px solid #CFE7CD;
+            border-top:210px solid transparent;
+            border-bottom:210px solid transparent;
+        }
+
+        /* Carta */
+        #carta{
+            position:absolute;
+            top:3px; left:0;
+            margin-left:5px;
+            width:590px; height:400px;
+            overflow:hidden;
+            z-index:1;
+            border-radius:10px;
+            background:#fef6f9;
+            box-shadow:0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 600ms cubic-bezier(.2,.9,.3,1);
+        }
+
+        .icon-cancel{
+            position:absolute;
+            top:8px; right:8px;
+            z-index:10001;
+            cursor:pointer;
+            user-select:none;
+            padding:6px 10px;
+            border-radius:50%;
+            background:rgba(255,255,255,0.85);
+            color:#ff8ba7;
+            transition:transform .15s, background .15s, color .15s;
+            display:none;
+        }
+        .icon-cancel:hover{ transform:scale(1.05); color:#ff4d6d; background:rgba(255,200,220,0.95); }
+
+        #carta img{
+            display:block;
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            opacity:1;
+            transition: opacity 300ms ease, transform 300ms ease;
+        }
+
+        /* Animaciones sobre */
+        .rotar, .tapa, .rotar_, .tapa_, .bajarTop, .subirTop { transition: all 1s ease-in-out; }
+        .bajarTop_, .subirTop_ { transition: all 0.8s ease-in-out; }
+        .rotar_, .bajarTop, .subirTop { transition-delay: 1s; }
+        .tapa, .tapa_ { transition-delay: 0.5s; }
+
+        .rotar { transform: rotate3d(0,1,0,180deg); }
+        .tapa  { transform: rotate3d(1,0,0,180deg); z-index:0 !important; }
+        .rotar_ { transform: rotate3d(0,1,0,0deg); }
+        .tapa_ { transform: rotate3d(1,0,0,0deg); z-index:10 !important; }
+
+        .bajarTop{ transform: translateY(-900px); }
+        .subirTop{ transform: translateY(750px); }
+        .bajarTop_, .subirTop_{ transform: translateY(0); }
+
+        /* Overlay imagen */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 10000;
+        }
+        .overlay__wrapper {
+            position: fixed;
+            background: transparent;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+            transition: top 450ms cubic-bezier(.2,.9,.3,1), left 450ms cubic-bezier(.2,.9,.3,1),
+                        width 450ms cubic-bezier(.2,.9,.3,1), height 450ms cubic-bezier(.2,.9,.3,1),
+                        border-radius 300ms ease;
+            will-change: top,left,width,height;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.96);
+        }
+        .overlay__img {
+            display:block;
+            max-width:100%;
+            max-height:100%;
+            width:100%;
+            height:100%;
+            object-fit:contain;
+            opacity:0;
+            transform: translateY(18px) scale(0.99);
+            transition: opacity 300ms ease, transform 300ms ease;
+        }
+        .overlay__img.visible { opacity:1; transform: translateY(0) scale(1); }
+
+        .overlay__close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 10002;
+            cursor: pointer;
+            font-size: 18px;
+            padding:6px 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.95);
+            color: #ff6b91;
+            user-select: none;
+        }
+        .overlay__close:hover { transform: scale(1.05); color: #ff4d6d; }
+
+        /* Canvas fuegos artificiales */
+        .fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 10001;
+        }
+
+        /* Responsive */
+        @media (max-width:480px){
+            #perspectiva{ top:80px; }
+            #contenedor{ width:480px; height:336px; }
+            #carta{ width:470px; height:320px; margin-left:0; }
+            #abrir{ border-left:240px solid transparent; border-right:240px solid transparent; border-top:208px solid #bbd8c0; }
+            #partes{ border-left:240px solid #CFE7CD; border-top:168px solid transparent; border-bottom:168px solid transparent; }
+            #partes:after{ border-left:240px solid transparent; border-right:240px solid transparent; border-bottom:208px solid #bbd8c0; }
+            #partes:before{ border-right:240px solid #CFE7CD; border-top:168px solid transparent; border-bottom:168px solid transparent; }
+            .cara h1 { margin-top:130px; font-size:1.4em; }
+        }
+    </style>
+</head>
+<body>
+    <div id="perspectiva">
+        <div id="contenedor">
+            <div class="cara frontal">
+                <h1>¡ABRIME PARA DESCUBRIR OTRA RAZÓN!</h1>
+            </div>
+
+            <div class="cara trasera">
+                <div id="abrir"></div>
+                <div id="partes"></div>
+
+                <div id="carta" aria-live="polite">
+                    <i class="icon-cancel" role="button" aria-label="Cerrar imagen" tabindex="0">✖</i>
+                    <img id="cardImage" src="tu forma de amar.png" alt="Imagen final de la carta" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    $(function(){
+        var $contenedor = $('#contenedor'),
+            $abrir = $('#abrir'),
+            $carta = $('#carta'),
+            $cara = $('.cara').find('h1'),
+            $icon = $('.icon-cancel'),
+            $pers = $('#perspectiva'),
+            $img = $('#cardImage');
+
+        var isOpen = false;
+        var $overlay = null, $wrapper = null, $overlayImg = null;
+        var fireworksStopper = null;
+
+        function calcularDimensiones(imgEl){
+            var natW = imgEl.naturalWidth || imgEl.width || 800;
+            var natH = imgEl.naturalHeight || imgEl.height || 600;
+            var maxW = Math.round(window.innerWidth * 0.90);
+            var maxH = Math.round(window.innerHeight * 0.80);
+            var scale = Math.min(maxW / natW, maxH / natH, 1);
+            var finalW = Math.round(natW * scale);
+            var finalH = Math.round(natH * scale);
+            return { w: finalW, h: finalH };
+        }
+
+        function crearOverlay(rect, imgSrc){
+            $overlay = $('<div class="overlay" aria-hidden="false"></div>').appendTo('body');
+            $wrapper = $('<div class="overlay__wrapper" role="dialog" aria-modal="true"></div>')
+                .css({ top: rect.top + 'px', left: rect.left + 'px', width: rect.width + 'px', height: rect.height + 'px', borderRadius: '10px' })
+                .appendTo($overlay);
+            $overlayImg = $('<img class="overlay__img" src="'+imgSrc+'" alt="" />').appendTo($wrapper);
+            var $close = $('<div class="overlay__close" role="button" tabindex="0" aria-label="Cerrar">✖</div>').appendTo($wrapper);
+
+            $close.on('click', closeOverlay);
+            $close.on('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeOverlay(); } });
+            $overlay.on('click', function(e){ if (!$(e.target).closest('.overlay__wrapper').length) closeOverlay(); });
+            $(document).on('keydown.overlay', function(e){ if (e.key === 'Escape') closeOverlay(); });
+
+            return { $overlay, $wrapper, $img: $overlayImg };
+        }
+
+        function abrir(){
+            if (isOpen) return;
+            isOpen = true;
+            $contenedor.removeClass('rotar_').addClass('rotar');
+            $abrir.removeClass('tapa_').addClass('tapa');
+            $carta.removeClass('bajarTop_').addClass('bajarTop');
+            $pers.removeClass('subirTop_').addClass('subirTop');
+
+            if (!$img[0].complete || ($img[0].naturalWidth === 0 && $img[0].naturalHeight === 0)) {
+                $img.one('load', function(){ iniciarEmerger(); });
+            } else {
+                iniciarEmerger();
+            }
+        }
+
+        function iniciarEmerger(){
+            var rect = $carta[0].getBoundingClientRect();
+            crearOverlay(rect, $img.attr('src'));
+            $img.css('visibility','hidden');
+            $wrapper[0].offsetHeight;
+            var dims = calcularDimensiones($overlayImg[0]);
+            var targetW = dims.w;
+            var targetH = dims.h;
+            var targetTop = Math.round((window.innerHeight - targetH) / 2);
+            var targetLeft = Math.round((window.innerWidth - targetW) / 2);
+
+            setTimeout(function(){
+                $wrapper.css({ top: targetTop + 'px', left: targetLeft + 'px', width: targetW + 'px', height: targetH + 'px', borderRadius: '10px' });
+                $wrapper.one('transitionend', function(ev){
+                    if (ev.originalEvent && /width|height|top|left/.test(ev.originalEvent.propertyName)) {
+                        $overlayImg.addClass('visible');
+                        fireworksStopper = lanzarFuegosArtificiales();
+                    }
+                });
+            }, 360);
+        }
+
+        function closeOverlay(){
+            if (!isOpen) return;
+            if ($overlayImg) $overlayImg.removeClass('visible');
+            var rect = $carta[0].getBoundingClientRect();
+            if ($wrapper) {
+                $wrapper.one('transitionend', function(ev){
+                    if (ev.originalEvent && /width|height|top|left/.test(ev.originalEvent.propertyName)) {
+                        if ($overlay) { $overlay.remove(); $overlay = $wrapper = $overlayImg = null; }
+                        $img.css('visibility','visible');
+                    }
+                });
+                $wrapper.css({ top: Math.round(rect.top) + 'px', left: Math.round(rect.left) + 'px', width: Math.round(rect.width) + 'px', height: Math.round(rect.height) + 'px', borderRadius: '10px' });
+            } else {
+                $img.css('visibility','visible');
+            }
+            $contenedor.removeClass('rotar').addClass('rotar_');
+            $abrir.removeClass('tapa').addClass('tapa_');
+            $carta.removeClass('bajarTop').addClass('bajarTop_');
+            $pers.removeClass('subirTop').addClass('subirTop_');
+            $(document).off('keydown.overlay');
+            if (fireworksStopper) { fireworksStopper(); fireworksStopper = null; }
+            isOpen = false;
+        }
+
+        // Fuegos artificiales
+        function lanzarFuegosArtificiales() {
+            const canvas = document.createElement("canvas");
+            canvas.className = "fireworks-canvas";
+            document.body.appendChild(canvas);
+            const ctx = canvas.getContext("2d");
+            let W = canvas.width = window.innerWidth;
+            let H = canvas.height = window.innerHeight;
+            window.addEventListener("resize", () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; });
+            const particles = [];
+            const colors = ["#ff4d6d", "#ffcc00", "#00ccff", "#66ff66", "#ff66ff", "#ff9966"];
+            function random(min, max) { return Math.random() * (max - min) + min; }
+            function createFirework() {
+                const x = random(W * 0.2, W * 0.8);
+                const y = random(H * 0.1, H * 0.4);
+                const count = random(40, 70);
+                for (let i = 0; i < count; i++) {
+                    const angle = (Math.PI * 2 * i) / count;
+                    const speed = random(2, 6);
+                    particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, alpha: 1, color: colors[Math.floor(Math.random() * colors.length)], radius: random(2, 4) });
+                }
+            }
+            let frame;
+            function animate() {
+                ctx.clearRect(0, 0, W, H);
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.05;
+                    p.alpha -= 0.01;
+                    if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                frame = requestAnimationFrame(animate);
+            }
+            const interval = setInterval(createFirework, 800);
+            createFirework();
+            animate();
+            return function stop() { clearInterval(interval); cancelAnimationFrame(frame); canvas.remove(); };
+        }
+
+        // eventos
+        setTimeout(function(){ abrir(); }, 1500);
+        $cara.on('click', function(e){ e.preventDefault(); abrir(); });
+        $icon.on('click', function(e){ e.preventDefault(); closeOverlay(); });
+        $icon.on('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeOverlay(); } });
+        $carta.on('click', function(e){ e.stopPropagation(); });
+        $img.on('load', function(){ if (isOpen && !$overlay) iniciarEmerger(); });
+        $(window).on('resize', function(){
+            if (!$overlay || !$wrapper || !$overlayImg) return;
+            var dims = calcularDimensiones($overlayImg[0]);
+            var targetW = dims.w, targetH = dims.h;
+            var targetTop = Math.round((window.innerHeight - targetH) / 2);
+            var targetLeft = Math.round((window.innerWidth - targetW) / 2);
+            $wrapper.css({ top: targetTop + 'px', left: targetLeft + 'px', width: targetW + 'px', height: targetH + 'px' });
+        });
+    });
+    </script>
+</body>
+</html>
