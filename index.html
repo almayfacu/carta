@@ -6,12 +6,40 @@
     <title>3D Card con Fuegos Artificiales</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+    <!-- Fuente moderna y común (Inter) con fallbacks de sistema -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
     <style>
+        /* =========================
+           Escalado responsivo global
+           ========================= */
+        :root{
+            /* Ancho base del sobre: escala con la ventana y limita en desktop */
+            --W: min(92vw, 640px);
+
+            /* Proporciones derivadas del diseño original 600x420 */
+            --H: calc(var(--W) * 0.7);          /* 420/600 = 0.7 */
+            --carta-w: calc(var(--W) * 0.9833); /* 590/600 ≈ 0.9833 */
+            --carta-h: calc(var(--W) * 0.6667); /* 400/600 ≈ 0.6667 */
+
+            /* Triángulos (bordes) según proporciones originales */
+            --tri-half: calc(var(--W) / 2);      /* 300 en base 600 */
+            --tri-top:  calc(var(--W) * 0.433);  /* 260/600 ≈ 0.433 */
+            --tri-side: calc(var(--W) * 0.35);   /* 210/600 ≈ 0.35 */
+
+            /* Desplazamientos animaciones escalados (antes 900 y 750) */
+            --up-shift:   calc(var(--W) * -1.5);  /* -900/600 = -1.5 */
+            --down-shift: calc(var(--W) * 1.25);  /*  750/600 =  1.25 */
+
+            /* Separación superior del escenario (antes 150px fijo) */
+            --stage-top: clamp(16px, 10vh, 150px);
+        }
+
         /* --- Estilos base --- */
         * { box-sizing: border-box; margin:0; padding:0; }
         html,body { height:100%; }
         body {
-            font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #ffc0cb;
             -webkit-font-smoothing:antialiased;
             overflow: hidden;
@@ -22,15 +50,16 @@
         /* --- Perspectiva / Contenedor 3D --- */
         #perspectiva{
             position:absolute;
-            top:150px;
+            top: var(--stage-top);
             left:50%;
             transform:translateX(-50%);
             perspective:800px;
             z-index:2;
+            width: var(--W);
         }
         #contenedor{
-            width:600px;
-            height:420px;
+            width: var(--W);
+            height: var(--H);
             border-radius:10px;
             transform-style:preserve-3d;
             position:relative;
@@ -42,12 +71,12 @@
             backface-visibility:hidden;
         }
         .cara h1{
-            margin-top:160px;
+            margin-top: calc(var(--H) * 0.38); /* equivalente proporcional a ~160px cuando W=600 */
             text-align:center;
             cursor:pointer;
             user-select:none;
             color:#ffffff;
-            font-size:1.8em;
+            font-size: clamp(1rem, 3.5vw, 1.8em);
             text-shadow:0 1px 1px rgba(255,255,255,0.9);
         }
 
@@ -64,13 +93,13 @@
             box-shadow:0 4px 10px rgba(0,0,0,0.1);
         }
 
-        /* Tapa y partes del sobre */
+        /* Tapa y partes del sobre — versión proporcional */
         #abrir{
             position:absolute; top:0; left:0;
             width:0; height:0;
-            border-top:260px solid #bbd8c0;
-            border-left:300px solid transparent;
-            border-right:300px solid transparent;
+            border-top: var(--tri-top) solid #bbd8c0;
+            border-left: var(--tri-half) solid transparent;
+            border-right: var(--tri-half) solid transparent;
             transform-origin:center top;
             transform-style:preserve-3d;
             z-index:10;
@@ -78,32 +107,33 @@
         #partes{
             position:absolute; top:0; left:0;
             width:0; height:0;
-            border-left:300px solid #CFE7CD;
-            border-top:210px solid transparent;
-            border-bottom:210px solid transparent;
+            border-left: var(--tri-half) solid #CFE7CD;
+            border-top: var(--tri-side) solid transparent;
+            border-bottom: var(--tri-side) solid transparent;
             z-index:5;
         }
         #partes:after{
-            content:""; position:absolute; bottom:-210px; left:-300px;
+            content:""; position:absolute; bottom: calc(var(--tri-side) * -1); left: calc(var(--tri-half) * -1);
             width:0;height:0;
-            border-bottom:260px solid #bbd8c0;
-            border-left:300px solid transparent;
-            border-right:300px solid transparent;
+            border-bottom: var(--tri-top) solid #bbd8c0;
+            border-left: var(--tri-half) solid transparent;
+            border-right: var(--tri-half) solid transparent;
         }
         #partes:before{
-            content:""; position:absolute; top:-210px; right:-300px;
+            content:""; position:absolute; top: calc(var(--tri-side) * -1); right: calc(var(--tri-half) * -1);
             width:0;height:0;
-            border-right:300px solid #CFE7CD;
-            border-top:210px solid transparent;
-            border-bottom:210px solid transparent;
+            border-right: var(--tri-half) solid #CFE7CD;
+            border-top: var(--tri-side) solid transparent;
+            border-bottom: var(--tri-side) solid transparent;
         }
 
-        /* Carta */
+        /* Carta — proporcional */
         #carta{
             position:absolute;
             top:3px; left:0;
-            margin-left:5px;
-            width:590px; height:400px;
+            margin-left: calc(var(--W) * 0.008); /* ≈ 5px a W=600 */
+            width: var(--carta-w);
+            height: var(--carta-h);
             overflow:hidden;
             z-index:1;
             border-radius:10px;
@@ -136,7 +166,7 @@
             transition: opacity 300ms ease, transform 300ms ease;
         }
 
-        /* Animaciones sobre */
+        /* Animaciones sobre (transiciones iguales, desplazamientos escalados) */
         .rotar, .tapa, .rotar_, .tapa_, .bajarTop, .subirTop { transition: all 1s ease-in-out; }
         .bajarTop_, .subirTop_ { transition: all 0.8s ease-in-out; }
         .rotar_, .bajarTop, .subirTop { transition-delay: 1s; }
@@ -147,15 +177,16 @@
         .rotar_ { transform: rotate3d(0,1,0,0deg); }
         .tapa_ { transform: rotate3d(1,0,0,0deg); z-index:10 !important; }
 
-        .bajarTop{ transform: translateY(-900px); }
-        .subirTop{ transform: translateY(750px); }
+        .bajarTop{ transform: translateY(var(--up-shift)); }
+        .subirTop{ transform: translateY(var(--down-shift)); }
         .bajarTop_, .subirTop_{ transform: translateY(0); }
 
-        /* Overlay imagen */
+        /* Overlay imagen (usar unidades del viewport "dinámicas" en móvil) */
         .overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
+            height: 100dvh; /* mejor en móviles modernos */
             pointer-events: none;
             z-index: 10000;
         }
@@ -203,27 +234,25 @@
         }
         .overlay__close:hover { transform: scale(1.05); color: #ff4d6d; }
 
-        /* Canvas fuegos artificiales */
+        /* Canvas fuegos artificiales con viewport dinámico */
         .fireworks-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
             pointer-events: none;
             z-index: 10001;
         }
 
-        /* Responsive */
-        @media (max-width:480px){
-            #perspectiva{ top:80px; }
-            #contenedor{ width:480px; height:336px; }
-            #carta{ width:470px; height:320px; margin-left:0; }
-            #abrir{ border-left:240px solid transparent; border-right:240px solid transparent; border-top:208px solid #bbd8c0; }
-            #partes{ border-left:240px solid #CFE7CD; border-top:168px solid transparent; border-bottom:168px solid transparent; }
-            #partes:after{ border-left:240px solid transparent; border-right:240px solid transparent; border-bottom:208px solid #bbd8c0; }
-            #partes:before{ border-right:240px solid #CFE7CD; border-top:168px solid transparent; border-bottom:168px solid transparent; }
-            .cara h1 { margin-top:130px; font-size:1.4em; }
+        /* Responsive fino para pantallas muy angostas o bajas */
+        @media (max-width:360px){
+            :root{ --stage-top: clamp(8px, 6vh, 24px); }
+        }
+        @media (max-height:520px){
+            :root{ --stage-top: clamp(8px, 6vh, 24px); }
+            .cara h1{ margin-top: calc(var(--H) * 0.32); }
         }
     </style>
 </head>
@@ -246,6 +275,10 @@
         </div>
     </div>
 
+    <!-- Audios abrir/cerrar -->
+    <audio id="flipSound" src="flip.mp3" preload="auto" playsinline></audio>
+    <audio id="closeSound" src="close.mp3" preload="auto" playsinline></audio>
+
     <script>
     $(function(){
         var $contenedor = $('#contenedor'),
@@ -259,6 +292,38 @@
         var isOpen = false;
         var $overlay = null, $wrapper = null, $overlayImg = null;
         var fireworksStopper = null;
+
+        // Sonidos
+        var flipSound = document.getElementById('flipSound');
+        var closeSound = document.getElementById('closeSound');
+
+        // Desbloqueo de audio en primera interacción (móviles/desktop)
+        function unlockAudioOnce() {
+            var tryPlay = function(a){
+                if (!a) return Promise.resolve();
+                try { a.muted = true; } catch(e){}
+                var p = a.play();
+                if (p && p.then) {
+                    return p.then(function(){ a.pause(); a.currentTime = 0; a.muted = false; });
+                }
+                return Promise.resolve();
+            };
+            Promise.all([tryPlay(flipSound), tryPlay(closeSound)]).finally(function(){
+                document.removeEventListener('touchstart', unlockAudioOnce, {passive:true});
+                document.removeEventListener('click', unlockAudioOnce);
+            });
+        }
+        document.addEventListener('touchstart', unlockAudioOnce, {passive:true, once:true});
+        document.addEventListener('click', unlockAudioOnce, {once:true});
+
+        function safePlay(a){
+            if (!a) return;
+            try {
+                a.currentTime = 0;
+                var p = a.play();
+                if (p && p.catch) p.catch(function(){ /* ignorar bloqueo */ });
+            } catch(e){}
+        }
 
         function calcularDimensiones(imgEl){
             var natW = imgEl.naturalWidth || imgEl.width || 800;
@@ -290,6 +355,10 @@
         function abrir(){
             if (isOpen) return;
             isOpen = true;
+
+            // Sonido al girar/abrir
+            safePlay(flipSound);
+
             $contenedor.removeClass('rotar_').addClass('rotar');
             $abrir.removeClass('tapa_').addClass('tapa');
             $carta.removeClass('bajarTop_').addClass('bajarTop');
@@ -326,6 +395,10 @@
 
         function closeOverlay(){
             if (!isOpen) return;
+
+            // Sonido al guardar/cerrar
+            safePlay(closeSound);
+
             if ($overlayImg) $overlayImg.removeClass('visible');
             var rect = $carta[0].getBoundingClientRect();
             if ($wrapper) {
@@ -348,7 +421,7 @@
             isOpen = false;
         }
 
-        // Fuegos artificiales
+        // Fuegos artificiales (igual)
         function lanzarFuegosArtificiales() {
             const canvas = document.createElement("canvas");
             canvas.className = "fireworks-canvas";
